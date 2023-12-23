@@ -1,4 +1,6 @@
+import re
 import socket
+import sys
 from pyfiglet import Figlet
 
 def print_banner():
@@ -18,7 +20,7 @@ def print_banner():
 def scan_port(target,port):
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(1)
+    sock.settimeout(0.5)
     
     try:
         sock.connect((target,port))
@@ -29,5 +31,24 @@ def scan_port(target,port):
         sock.close()
 
 
+def is_valid_ip(ip_str):
+    ip_pattern = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
+
+    if ip_pattern.match(ip_str):
+        return True
+    else:
+        return False
+
+
 if __name__ == "__main__":
-    print_banner()
+    try:
+        target = "120.0.0.1"
+        # target = sys.argv[1]
+        print_banner()
+        if target != "":
+            for port in range(630,641):
+                scan_port(target,port)
+        else:
+            print("Please enter a target IP address")
+    except IndexError:
+        print("No target IP address given")
