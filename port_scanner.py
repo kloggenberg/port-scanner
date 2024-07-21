@@ -2,25 +2,26 @@ import re
 import socket
 import sys
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pyfiglet import Figlet
+import logging
+import argparse
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(message)s')
+logger = logging.getLogger()
 
 def print_banner():
     TEXT = "Port Scanner 9000"
-    # Create a Figlet object
     fig = Figlet()
-
-    # Use the Figlet object to convert text to ASCII art
     ascii_art = fig.renderText(TEXT)
-
-    # Print the ASCII art
     print("-" * 100)
     print(ascii_art)
     print("-" * 100)
 
-def scan_port(target, port, results):
+def scan_port(target, port, timeout, results):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(0.5)
-
+    sock.settimeout(timeout)
     try:
         sock.connect((target, port))
         results.append((port, "OPEN"))
@@ -39,51 +40,40 @@ def is_valid_ip(ip_str):
         return True
     return False
 
-def thread_scan(target, start_port, end_port):
-    threads = []
+def thread_scan(target, start_port, end_port, timeout):
     results = []
-    for port in range(start_port, end_port + 1):
-        t = threading.Thread(target=scan_port, args=(target, port, results))
-        threads.append(t)
-        t.start()
-
-    for t in threads:
-        t.join()
-
+    with ThreadPoolExecutor(max_workers=100) as executor:
+        for port in range(start_port, end_port + 1):
+            executor.submit(scan_port, target, port, timeout, results)
     results.sort()
     for port, status in results:
-        print(f"Port {port} is {status}")
+        logger.info(f"Port {port} is {status}")
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Port Scanner 9000')
+    parser.add_argument('target', help='Target IP address')
+    parser.add_argument('-p', '--ports', default='20-80', help='Port range to scan (e.g., 20-80)')
+    parser.add_argument('-t', '--timeout', type=float, default=0.5, help='Timeout for each port scan')
+    return parser.parse_args()
 
 if __name__ == "__main__":
+    args = parse_args()
+    target = args.target
+
+    if not is_valid_ip(target):
+        logger.error("Invalid IP address format")
+        sys.exit(1)
+
     try:
-        # Check for command line arguments
-        if len(sys.argv) < 2:
-            raise IndexError
+        start_port, end_port = map(int, args.ports.split('-'))
+        if start_port < 0 or end_port > 65535 or start_port > end_port:
+            raise ValueError("Invalid port range")
+    except ValueError:
+        logger.error("Invalid port range format")
+        sys.exit(1)
 
-        target = sys.argv[1]
-        if not is_valid_ip(target):
-            raise ValueError("Invalid IP address format")
+    print_banner()
+    logger.info(f"Scanning target: {target}")
+    logger.info(f"Scanning ports {start_port} to {end_port}...\n")
 
-        # Prompt the user for port range
-        port_range = input("Enter port range to scan (e.g., 20-80): ")
-
-        # Extract start and end ports
-        try:
-            start_port, end_port = map(int, port_range.split('-'))
-            if start_port < 0 or end_port > 65535 or start_port > end_port:
-                raise ValueError("Invalid port range")
-        except ValueError:
-            raise ValueError("Invalid port range format")
-
-        print_banner()
-        print(f"Scanning target: {target}")
-        print(f"Scanning ports {start_port} to {end_port}...\n")
-
-        thread_scan(target, start_port, end_port)
-
-    except IndexError:
-        print("Usage: python port_scanner.py <target_ip>")
-    except ValueError as ve:
-        print(ve)
-    except Exception as e:
-        print(f"An error occurred: {e}")
+    thread_scan(target, start_port, end_port, args.timeout)
