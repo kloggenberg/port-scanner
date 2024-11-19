@@ -19,14 +19,24 @@ def print_banner():
     print(ascii_art)
     print("-" * 100)
 
+def grab_banner(sock):
+    try:
+        sock.sendall(b"HEAD / HTTP/1.1\r\n\r\n")
+        banner = sock.recv(1024).decode('utf-8').strip()
+        return banner if banner else "No banner"
+    except Exception as e:
+        return f"Error grabbing banner: {e}"
+
 def scan_port(target, port, timeout, results):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(timeout)
     try:
         sock.connect((target, port))
-        results.append((port, "OPEN"))
-    except:
-        results.append((port, "CLOSED"))
+        status = "OPEN"
+        banner = grab_banner(sock)
+        results.append((port, status, banner))
+    except Exception:
+        results.append((port, "CLOSED", None))
     finally:
         sock.close()
 
@@ -46,8 +56,11 @@ def thread_scan(target, start_port, end_port, timeout):
         for port in range(start_port, end_port + 1):
             executor.submit(scan_port, target, port, timeout, results)
     results.sort()
-    for port, status in results:
-        logger.info(f"Port {port} is {status}")
+    for port, status, banner in results:
+        if status == "OPEN":
+            logger.info(f"Port {port} is {status}. Banner: {banner}")
+        else:
+            logger.info(f"Port {port} is {status}")
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Port Scanner 9000')

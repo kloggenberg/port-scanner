@@ -1,6 +1,6 @@
 # Port Scanner 9000
 
-Port Scanner 9000 is a simple multi-threaded port scanner that scans a specified range of ports on a target IP address. The scanner outputs whether each port is open or closed.
+Port Scanner 9000 is a simple multi-threaded port scanner that scans a specified range of ports on a target IP address. It identifies whether each port is open or closed and attempts to grab banners from open ports to provide additional information about running services.
 
 ## Features
 
@@ -8,6 +8,7 @@ Port Scanner 9000 is a simple multi-threaded port scanner that scans a specified
 - User-friendly ASCII art banner
 - Validates IP addresses and port ranges
 - Scans ports in a specified range and outputs results in numerical order
+- **NEW:** Banner grabbing for open ports to identify running services
 
 ## Requirements
 
@@ -48,13 +49,13 @@ Port Scanner 9000 is a simple multi-threaded port scanner that scans a specified
     python port_scanner.py 192.168.1.1
     ```
 
-2. When prompted, enter the range of ports to be scanned in the format `start-end`:
+2. Optionally, specify the port range and timeout:
 
     ```sh
-    Enter port range to scan (e.g., 20-80): 630-640
+    python port_scanner.py 192.168.1.1 -p 20-100 -t 1
     ```
 
-3. The script will scan the specified range of ports and output the results in numerical order.
+3. The script will scan the specified range of ports, output the results in numerical order, and display any retrieved banners for open ports.
 
 ## Example Output
 
@@ -68,9 +69,11 @@ Port Scanner 9000 is a simple multi-threaded port scanner that scans a specified
                                                                                         
 ----------------------------------------------------------------------------------------------------
 Scanning target: 192.168.1.1
-Scanning ports 630 to 640...
+Scanning ports 20 to 25...
 
-Port 630 is CLOSED
-Port 631 is CLOSED
-Port 632 is CLOSED
-Port 633 is CLOSED
+Port 20 is CLOSED
+Port 21 is OPEN. Banner: 220 FTP Server ready.
+Port 22 is OPEN. Banner: SSH-2.0-OpenSSH_7.9
+Port 23 is CLOSED
+Port 24 is CLOSED
+Port 25 is OPEN. Banner: 220 smtp.example.com ESMTP Postfix
